@@ -125,3 +125,4 @@ data/
 *.sql*
 
 byro.cfg
+/etc/byro/byro.cfg

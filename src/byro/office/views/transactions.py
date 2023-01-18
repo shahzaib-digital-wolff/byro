@@ -1,10 +1,13 @@
 from django import forms
 from django.contrib import messages
 from django.db import transaction
+from django.db.transaction import atomic
+from django.forms import formset_factory
 from django.shortcuts import redirect
 from django.urls import reverse
+from django.utils.timezone import now
 from django.utils.translation import gettext_lazy as _
-from django.views.generic import ListView
+from django.views.generic import ListView, FormView
 from django_select2.forms import Select2Widget
 
 from byro.bookkeeping.models import (
@@ -136,3 +139,47 @@ class TransactionDetailView(ListView):
             document=form.instance,
             content_hash=form.instance.content_hash,
         )
+
+
+TransactionFormSet = formset_factory(NewBookingForm, extra=1)
+
+
+class TransactionAddView(FormView):
+    template_name = "office/transaction/add.html"
+    model = Transaction
+    form_class = TransactionFormSet
+
+    def get_context_data(self, **kwargs):
+        context = super(TransactionAddView, self).get_context_data(**kwargs)
+        account_pk = self.request.GET["account"]
+        context["formset"] = TransactionFormSet(initial=[{"account": account_pk}])
+        context["form"].form.base_fields["member"].required = False
+        return context
+
+    @atomic
+    def post(self, request, *args, **kwargs):
+        formset = TransactionFormSet(request.POST)
+        account_pk = self.request.GET["account"]
+        if formset.is_valid():
+            t = Transaction.objects.create(
+                value_datetime=now(),
+                user_or_context=request.user,
+                user=request.user,
+            )
+            for form in formset:
+                arguments = dict(
+                    memo=form.cleaned_data["memo"],
+                    account=form.cleaned_data["account"],
+                    member=form.cleaned_data["member"],
+                    user_or_context=self,
+                )
+                if form.cleaned_data["debit_value"]:
+                    t.debit(amount=form.cleaned_data["debit_value"], **arguments)
+                if form.cleaned_data["credit_value"]:
+                    t.credit(amount=form.cleaned_data["credit_value"], **arguments)
+            t.save()
+
+            messages.success(self.request, _("The transactions were created."))
+            t.log(self, ".created")
+
+        return redirect("office:finance.accounts.detail", pk=account_pk)

@@ -116,6 +116,11 @@ urlpatterns = [
         name="finance.transactions.detail",
     ),
     re_path(
+        r"^transactions/add",
+        transactions.TransactionAddView.as_view(),
+        name="finance.transactions.add",
+    ),
+    re_path(
         "^upload/list", upload.UploadListView.as_view(), name="finance.uploads.list"
     ),
     re_path(
