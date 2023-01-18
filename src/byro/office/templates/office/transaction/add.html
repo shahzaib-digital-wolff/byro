@@ -1,0 +1,42 @@
+{% extends "office/base_headline.html" %}
+{% load i18n %}
+{% load bootstrap4 %}
+{% load static %}
+{% load formset_tags %}
+
+{% block headline %}{% trans "Add transaction" %}{% endblock %}
+
+{% block content %}
+{{ form.media.css }}
+{# FIXME Deduplicate with account/detail.html? #}
+<form method="POST">
+{% csrf_token %}
+<table class="table table-sm">
+    <thead>
+        <tr>
+            <th>{% trans "Date" %}</th>
+            <th>{% trans "Purpose" %}<br><i>{% trans "Originator/Recipient" %}</i></th>
+            <th>{% trans "Member" %}</th>
+            <th>{% trans "Account" %}</th>
+            <th>{% trans "Incoming" %}</th>
+            <th>{% trans "Outgoing" %}</th>
+        </tr>
+    </thead>
+    <tbody>
+        {{ formset.management_form }}
+        {% for form in formset %}
+            <tr class="transaction-{% cycle 'row-odd' 'row-even' as account_row %}">
+                <td class="related-empty"></td>
+                <td> {{ form.memo }} </td>
+                <td>{{ form.member }}</td>
+                <td>{{ form.account }}</td>
+                <td>{{ form.debit_value }}</td>
+                <td>{{ form.credit_value }}</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+    <button class="btn btn-success" type="submit">{% trans "Save" %}</button>
+</form>
+{{ form.media.js }}
+{% endblock %}

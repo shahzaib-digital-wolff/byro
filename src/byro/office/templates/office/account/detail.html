@@ -5,11 +5,16 @@
 
 {% block account_content %}
 
-<form method='post' class="inline-form">
-    {% csrf_token %}
-    {% bootstrap_form form layout='inline' %}
-    <button class="btn btn-success" type="submit">{% trans "Save" %}</button>
-</form>
+<div class="inline-form">
+    <form method='post' class="inline-form">
+        {% csrf_token %}
+        {% bootstrap_form form layout='inline' %}
+        <button class="btn btn-success" type="submit">{% trans "Save" %}</button>
+    </form>
+    <a href="{% url "office:finance.transactions.add" %}?account={{account.pk}}">
+        <button class="btn btn-success" type="button">{% trans "New Tx" %}</button>
+    </a>
+</div>
 
 <table class="table table-sm">
     <thead>
