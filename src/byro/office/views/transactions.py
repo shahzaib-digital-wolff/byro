@@ -18,6 +18,7 @@ from byro.bookkeeping.models import (
 )
 
 from .documents import DocumentUploadForm
+from ..mixins import TransactionMixin
 
 
 class NewBookingForm(forms.Form):
@@ -32,7 +33,7 @@ class NewBookingForm(forms.Form):
     )
 
 
-class TransactionDetailView(ListView):
+class TransactionDetailView(ListView, TransactionMixin):
     template_name = "office/transaction/detail.html"
     context_object_name = "bookings"
     model = Transaction
@@ -115,20 +116,7 @@ class TransactionDetailView(ListView):
             return redirect("office:finance.transactions.detail", pk=t.pk)
 
     def process_transaction_changes(self, form, t):
-        arguments = dict(
-            memo=form.cleaned_data["memo"],
-            account=form.cleaned_data["account"],
-            member=form.cleaned_data["member"],
-            importer="_manual_entry",
-            user_or_context=self,
-        )
-        if form.cleaned_data["debit_value"]:
-            t.debit(amount=form.cleaned_data["debit_value"], **arguments)
-        if form.cleaned_data["credit_value"]:
-            t.credit(amount=form.cleaned_data["credit_value"], **arguments)
-        t.save()
-        messages.success(self.request, _("The transaction was updated."))
-        t.log(self, ".updated")
+        self.add_or_update_transaction(form, t, ".updated")
 
     def process_upload_form(self, form, t):
         form.save()
@@ -144,7 +132,7 @@ class TransactionDetailView(ListView):
 TransactionFormSet = formset_factory(NewBookingForm, extra=1)
 
 
-class TransactionAddView(FormView):
+class TransactionAddView(FormView, TransactionMixin):
     template_name = "office/transaction/add.html"
     model = Transaction
     form_class = TransactionFormSet
@@ -167,19 +155,6 @@ class TransactionAddView(FormView):
                 user=request.user,
             )
             for form in formset:
-                arguments = dict(
-                    memo=form.cleaned_data["memo"],
-                    account=form.cleaned_data["account"],
-                    member=form.cleaned_data["member"],
-                    user_or_context=self,
-                )
-                if form.cleaned_data["debit_value"]:
-                    t.debit(amount=form.cleaned_data["debit_value"], **arguments)
-                if form.cleaned_data["credit_value"]:
-                    t.credit(amount=form.cleaned_data["credit_value"], **arguments)
-            t.save()
-
-            messages.success(self.request, _("The transactions were created."))
-            t.log(self, ".created")
+                self.add_or_update_transaction(form, t, ".created")
 
         return redirect("office:finance.accounts.detail", pk=account_pk)
